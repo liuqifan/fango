@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xsi:schemaLocation=" http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd">
+
+    <!-- 连接服务配置  -->
+    <rabbit:connection-factory id="connectionFactory" addresses="${spring.rabbitmq.addresses}" virtual-host="/"
+                               username="${spring.rabbitmq.username}"
+                               password="${spring.rabbitmq.password}"  cache-mode="CONNECTION" connection-cache-size="25" thread-factory="tf" />
+
+    <bean id="tf" class="org.springframework.scheduling.concurrent.CustomizableThreadFactory">
+        <constructor-arg value="rabbitmq-" />
+    </bean>
+
+    <rabbit:admin connection-factory="connectionFactory"/>
+
+    <!-- queue 队列声明-->
+    <rabbit:queue id="my_queue" durable="true" auto-delete="false" exclusive="false" name="my_queue"/>
+
+    <!-- exchange queue binging key 绑定
+    <rabbit:direct-exchange name="my_exchange" durable="true" auto-delete="false"  id="my_exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="my_queue" key="my_queue_key" />
+        </rabbit:bindings>
+    </rabbit:direct-exchange> -->
+    <rabbit:topic-exchange name="my_exchange" durable="true" auto-delete="false"  id="my_exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="my_queue" pattern="my_queue_key"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
+
+    <!-- spring amqp默认的是jackson 的一个插件,目的将生产者生产的数据转换为json存入消息队列，由于fastjson的速度快于jackson,这里替换为fastjson的一个实现 -->
+    <bean id="jsonMessageConverter" class="org.springframework.amqp.support.converter.Jackson2JsonMessageConverter"/>
+    <!-- spring template声明-->
+    <rabbit:template id="amqpTemplate" connection-factory="connectionFactory" exchange="my_exchange"
+                     routing-key="my_queue_key"  message-converter="jsonMessageConverter"/>
+
+    <!--消费者监听-->
+    <bean id="consumer" class="com.fango.rabbit.Foo"/>
+
+    <rabbit:listener-container connection-factory="connectionFactory" acknowledge="manual">
+        <rabbit:listener ref="consumer" method="onMessage" queue-names="my_queue" />
+    </rabbit:listener-container>
+
+</beans>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans  
+  http://www.springframework.org/schema/beans/spring-beans-4.3.xsd  
+  http://www.springframework.org/schema/context  
+  http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<!-- 数据源 org.apache.commons.dbcp.BasicDataSource com.alibaba.druid.pool.DruidDataSource -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="name" value="${db.dbone.name}" />
+        <property name="driverClassName" value="${db.dbone.driverClassName}" />
+        <property name="url" value="${db.dbone.dbUrl}" />
+        <property name="username" value="${db.dbone.username}" />
+        <property name="password" value="${db.dbone.password}" />
+
+        <!-- 初始化连接大小 -->
+        <property name="initialSize" value="${db.dbone.initialSize}" />
+        <!-- 连接池最大使用连接数量 -->
+        <property name="maxActive" value="${db.dbone.maxActive}" />
+        <!-- 连接池最小空闲 -->
+        <property name="minIdle" value="${db.dbone.minIdle}" />
+        <!-- 获取连接最大等待时间 -->
+        <property name="maxWait" value="${db.dbone.maxWait}" />
+
+        <property name="validationQuery" value="${db.dbone.validationQuery}"/>
+        <property name="testOnBorrow" value="false" />
+        <property name="testOnReturn" value="false" />
+        <property name="testWhileIdle" value="true" />
+
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="${db.dbone.timeBetweenEvictionRunsMillis}" />
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="${db.dbone.minEvictableIdleTimeMillis}" />
+
+        <!-- 打开removeAbandoned功能 -->
+        <property name="removeAbandoned" value="true" />
+        <!-- 1800秒，也就是30分钟 -->
+        <property name="removeAbandonedTimeout" value="1800" />
+        <!-- 关闭abanded连接时输出错误日志 -->
+        <property name="logAbandoned" value="true" />
+
+        <property name="poolPreparedStatements" value="true" />
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="${db.dbone.maxPoolPreparedStatementPerConnectionSize}" />
+        <!-- 监控数据库 -->
+        <property name="filters" value="${db.dbone.filters}" />
+    </bean>
+
+    <!-- 配置druid监控spring jdbc -->
+    <bean id="druid-stat-interceptor"
+        class="com.alibaba.druid.support.spring.stat.DruidStatInterceptor">
+    </bean>
+
+	<!-- spring和MyBatis完美整合，不需要mybatis的配置映射文件 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 注入数据库连接池 -->
+		<property name="dataSource" ref="dataSource" />
+		<!-- 配置MyBaties全局配置文件:mybatis-config.xml -->
+		<property name="configLocation" value="classpath:mybatis/mybatis-dbone-config.xml" />
+		<!-- 自动扫描mapping.xml文件 -->
+		<property name="mapperLocations" value="classpath:mybatis/mapper/dbone/*.xml"></property>
+		<!-- 扫描model包 使用别名 -->
+		<property name="typeAliasesPackage" value="com.fango.model" />
+	</bean>
+
+	<!-- DAO接口所在包名，Spring会自动查找其下的类 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- 注入sqlSessionFactory -->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+		<!-- 给出需要扫描Dao接口包 -->
+		<property name="basePackage" value="com.fango.dao" />
+	</bean>
+
+	<!-- (事务管理)transaction manager, use JtaTransactionManager for global tx -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+</beans>
